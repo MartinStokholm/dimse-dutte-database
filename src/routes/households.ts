@@ -1,88 +1,140 @@
-import { Router, Request, Response } from 'express';
-import { prisma } from '../services/database';
+import { Router } from 'express';
+import {
+  createHousehold,
+  getHouseholds,
+  getHouseholdById,
+  updateHousehold,
+  deleteHousehold,
+} from '../controllers/householdController';
 
 const router = Router();
 
-// Create household
-router.post('/', async (req: Request, res: Response) => {
-  try {
-    const { name, description } = req.body;
+/**
+ * @swagger
+ * /api/households:
+ *   post:
+ *     tags: [Households]
+ *     summary: Create a new household
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name]
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: My Household
+ *               description:
+ *                 type: string
+ *                 example: Family home
+ *     responses:
+ *       201:
+ *         description: Household created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Household'
+ *       400:
+ *         description: Invalid input
+ */
+router.post('/', createHousehold);
 
-    const household = await prisma.household.create({
-      data: {
-        name,
-        description,
-      },
-    });
+/**
+ * @swagger
+ * /api/households:
+ *   get:
+ *     tags: [Households]
+ *     summary: Get all households
+ *     responses:
+ *       200:
+ *         description: List of households
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Household'
+ */
+router.get('/', getHouseholds);
 
-    res.status(201).json(household);
-  } catch (error) {
-    res.status(400).json({ error: 'Failed to create household' });
-  }
-});
+/**
+ * @swagger
+ * /api/households/{id}:
+ *   get:
+ *     tags: [Households]
+ *     summary: Get household by ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Household details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Household'
+ *       404:
+ *         description: Household not found
+ */
+router.get('/:id', getHouseholdById);
 
-// Get all households
-router.get('/', async (_req: Request, res: Response) => {
-  try {
-    const households = await prisma.household.findMany();
-    res.json(households);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch households' });
-  }
-});
+/**
+ * @swagger
+ * /api/households/{id}:
+ *   patch:
+ *     tags: [Households]
+ *     summary: Update household
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Household updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Household'
+ */
+router.patch('/:id', updateHousehold);
 
-// Get household by ID
-router.get('/:id', async (req: Request, res: Response) => {
-  try {
-    const household = await prisma.household.findUnique({
-      where: { id: req.params.id },
-      include: {
-        users: true,
-        rooms: true,
-        items: true,
-      },
-    });
-
-    if (!household) {
-      return res.status(404).json({ error: 'Household not found' });
-    }
-
-    res.json(household);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch household' });
-  }
-});
-
-// Update household
-router.patch('/:id', async (req: Request, res: Response) => {
-  try {
-    const { name, description } = req.body;
-
-    const household = await prisma.household.update({
-      where: { id: req.params.id },
-      data: {
-        name,
-        description,
-      },
-    });
-
-    res.json(household);
-  } catch (error) {
-    res.status(400).json({ error: 'Failed to update household' });
-  }
-});
-
-// Delete household
-router.delete('/:id', async (req: Request, res: Response) => {
-  try {
-    await prisma.household.delete({
-      where: { id: req.params.id },
-    });
-
-    res.status(204).send();
-  } catch (error) {
-    res.status(400).json({ error: 'Failed to delete household' });
-  }
-});
+/**
+ * @swagger
+ * /api/households/{id}:
+ *   delete:
+ *     tags: [Households]
+ *     summary: Delete household
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       204:
+ *         description: Household deleted
+ */
+router.delete('/:id', deleteHousehold);
 
 export default router;

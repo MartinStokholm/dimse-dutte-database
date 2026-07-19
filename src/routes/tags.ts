@@ -1,89 +1,132 @@
-import { Router, Request, Response } from 'express';
-import { prisma } from '../services/database';
+import { Router } from 'express';
+import {
+  createTag,
+  getTags,
+  getTagById,
+  updateTag,
+  deleteTag,
+} from '../controllers/tagController';
 
 const router = Router();
 
-// Create tag
-router.post('/', async (req: Request, res: Response) => {
-  try {
-    const { name } = req.body;
+/**
+ * @swagger
+ * /api/tags:
+ *   post:
+ *     tags: [Tags]
+ *     summary: Create a new tag
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name]
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: USB-C
+ *     responses:
+ *       201:
+ *         description: Tag created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Tag'
+ */
+router.post('/', createTag);
 
-    const tag = await prisma.tag.create({
-      data: {
-        name,
-      },
-    });
+/**
+ * @swagger
+ * /api/tags:
+ *   get:
+ *     tags: [Tags]
+ *     summary: Get all tags
+ *     responses:
+ *       200:
+ *         description: List of tags
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Tag'
+ */
+router.get('/', getTags);
 
-    res.status(201).json(tag);
-  } catch (error) {
-    res.status(400).json({ error: 'Failed to create tag' });
-  }
-});
+/**
+ * @swagger
+ * /api/tags/{id}:
+ *   get:
+ *     tags: [Tags]
+ *     summary: Get tag by ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Tag details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Tag'
+ */
+router.get('/:id', getTagById);
 
-// Get all tags
-router.get('/', async (_req: Request, res: Response) => {
-  try {
-    const tags = await prisma.tag.findMany({
-      include: {
-        items: true,
-      },
-    });
+/**
+ * @swagger
+ * /api/tags/{id}:
+ *   patch:
+ *     tags: [Tags]
+ *     summary: Update tag
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name]
+ *             properties:
+ *               name:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Tag updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Tag'
+ */
+router.patch('/:id', updateTag);
 
-    res.json(tags);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch tags' });
-  }
-});
-
-// Get tag by ID
-router.get('/:id', async (req: Request, res: Response) => {
-  try {
-    const tag = await prisma.tag.findUnique({
-      where: { id: req.params.id },
-      include: {
-        items: true,
-      },
-    });
-
-    if (!tag) {
-      return res.status(404).json({ error: 'Tag not found' });
-    }
-
-    res.json(tag);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch tag' });
-  }
-});
-
-// Update tag
-router.patch('/:id', async (req: Request, res: Response) => {
-  try {
-    const { name } = req.body;
-
-    const tag = await prisma.tag.update({
-      where: { id: req.params.id },
-      data: {
-        name,
-      },
-    });
-
-    res.json(tag);
-  } catch (error) {
-    res.status(400).json({ error: 'Failed to update tag' });
-  }
-});
-
-// Delete tag
-router.delete('/:id', async (req: Request, res: Response) => {
-  try {
-    await prisma.tag.delete({
-      where: { id: req.params.id },
-    });
-
-    res.status(204).send();
-  } catch (error) {
-    res.status(400).json({ error: 'Failed to delete tag' });
-  }
-});
+/**
+ * @swagger
+ * /api/tags/{id}:
+ *   delete:
+ *     tags: [Tags]
+ *     summary: Delete tag
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       204:
+ *         description: Tag deleted
+ */
+router.delete('/:id', deleteTag);
 
 export default router;

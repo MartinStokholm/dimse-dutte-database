@@ -1,94 +1,146 @@
-import { Router, Request, Response } from 'express';
-import { prisma } from '../services/database';
+import { Router } from 'express';
+import {
+  createRoom,
+  getRooms,
+  getRoomById,
+  updateRoom,
+  deleteRoom,
+} from '../controllers/roomController';
 
 const router = Router();
 
-// Create room
-router.post('/', async (req: Request, res: Response) => {
-  try {
-    const { householdId, name, description } = req.body;
+/**
+ * @swagger
+ * /api/rooms:
+ *   post:
+ *     tags: [Rooms]
+ *     summary: Create a new room
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [householdId, name]
+ *             properties:
+ *               householdId:
+ *                 type: string
+ *                 format: uuid
+ *               name:
+ *                 type: string
+ *                 example: Kitchen
+ *               description:
+ *                 type: string
+ *                 example: Main kitchen area
+ *     responses:
+ *       201:
+ *         description: Room created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Room'
+ */
+router.post('/', createRoom);
 
-    const room = await prisma.room.create({
-      data: {
-        householdId,
-        name,
-        description,
-      },
-    });
+/**
+ * @swagger
+ * /api/rooms:
+ *   get:
+ *     tags: [Rooms]
+ *     summary: Get all rooms
+ *     parameters:
+ *       - in: query
+ *         name: householdId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Filter by household
+ *     responses:
+ *       200:
+ *         description: List of rooms
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Room'
+ */
+router.get('/', getRooms);
 
-    res.status(201).json(room);
-  } catch (error) {
-    res.status(400).json({ error: 'Failed to create room' });
-  }
-});
+/**
+ * @swagger
+ * /api/rooms/{id}:
+ *   get:
+ *     tags: [Rooms]
+ *     summary: Get room by ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Room details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Room'
+ */
+router.get('/:id', getRoomById);
 
-// Get rooms by household
-router.get('/', async (req: Request, res: Response) => {
-  try {
-    const { householdId } = req.query;
+/**
+ * @swagger
+ * /api/rooms/{id}:
+ *   patch:
+ *     tags: [Rooms]
+ *     summary: Update room
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Room updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Room'
+ */
+router.patch('/:id', updateRoom);
 
-    const rooms = await prisma.room.findMany({
-      where: householdId ? { householdId: String(householdId) } : undefined,
-      include: { items: true },
-    });
-
-    res.json(rooms);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch rooms' });
-  }
-});
-
-// Get room by ID
-router.get('/:id', async (req: Request, res: Response) => {
-  try {
-    const room = await prisma.room.findUnique({
-      where: { id: req.params.id },
-      include: {
-        items: true,
-        media: true,
-      },
-    });
-
-    if (!room) {
-      return res.status(404).json({ error: 'Room not found' });
-    }
-
-    res.json(room);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch room' });
-  }
-});
-
-// Update room
-router.patch('/:id', async (req: Request, res: Response) => {
-  try {
-    const { name, description } = req.body;
-
-    const room = await prisma.room.update({
-      where: { id: req.params.id },
-      data: {
-        name,
-        description,
-      },
-    });
-
-    res.json(room);
-  } catch (error) {
-    res.status(400).json({ error: 'Failed to update room' });
-  }
-});
-
-// Delete room
-router.delete('/:id', async (req: Request, res: Response) => {
-  try {
-    await prisma.room.delete({
-      where: { id: req.params.id },
-    });
-
-    res.status(204).send();
-  } catch (error) {
-    res.status(400).json({ error: 'Failed to delete room' });
-  }
-});
+/**
+ * @swagger
+ * /api/rooms/{id}:
+ *   delete:
+ *     tags: [Rooms]
+ *     summary: Delete room
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       204:
+ *         description: Room deleted
+ */
+router.delete('/:id', deleteRoom);
 
 export default router;

@@ -1,96 +1,141 @@
-import { Router, Request, Response } from 'express';
-import { prisma } from '../services/database';
+import { Router } from 'express';
+import {
+  createCategory,
+  getCategories,
+  getCategoryById,
+  updateCategory,
+  deleteCategory,
+} from '../controllers/categoryController';
 
 const router = Router();
 
-// Create category
-router.post('/', async (req: Request, res: Response) => {
-  try {
-    const { name, description, parentCategoryId } = req.body;
+/**
+ * @swagger
+ * /api/categories:
+ *   post:
+ *     tags: [Categories]
+ *     summary: Create a new category
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name]
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: Kitchen
+ *               description:
+ *                 type: string
+ *               parentCategoryId:
+ *                 type: string
+ *                 format: uuid
+ *     responses:
+ *       201:
+ *         description: Category created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Category'
+ */
+router.post('/', createCategory);
 
-    const category = await prisma.category.create({
-      data: {
-        name,
-        description,
-        parentCategoryId,
-      },
-    });
+/**
+ * @swagger
+ * /api/categories:
+ *   get:
+ *     tags: [Categories]
+ *     summary: Get all categories
+ *     responses:
+ *       200:
+ *         description: List of categories (hierarchical)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Category'
+ */
+router.get('/', getCategories);
 
-    res.status(201).json(category);
-  } catch (error) {
-    res.status(400).json({ error: 'Failed to create category' });
-  }
-});
+/**
+ * @swagger
+ * /api/categories/{id}:
+ *   get:
+ *     tags: [Categories]
+ *     summary: Get category by ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Category details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Category'
+ */
+router.get('/:id', getCategoryById);
 
-// Get all categories
-router.get('/', async (_req: Request, res: Response) => {
-  try {
-    const categories = await prisma.category.findMany({
-      include: {
-        children: true,
-        parent: true,
-      },
-    });
+/**
+ * @swagger
+ * /api/categories/{id}:
+ *   patch:
+ *     tags: [Categories]
+ *     summary: Update category
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               parentCategoryId:
+ *                 type: string
+ *                 format: uuid
+ *     responses:
+ *       200:
+ *         description: Category updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Category'
+ */
+router.patch('/:id', updateCategory);
 
-    res.json(categories);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch categories' });
-  }
-});
-
-// Get category by ID
-router.get('/:id', async (req: Request, res: Response) => {
-  try {
-    const category = await prisma.category.findUnique({
-      where: { id: req.params.id },
-      include: {
-        items: true,
-        children: true,
-        parent: true,
-      },
-    });
-
-    if (!category) {
-      return res.status(404).json({ error: 'Category not found' });
-    }
-
-    res.json(category);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch category' });
-  }
-});
-
-// Update category
-router.patch('/:id', async (req: Request, res: Response) => {
-  try {
-    const { name, description, parentCategoryId } = req.body;
-
-    const category = await prisma.category.update({
-      where: { id: req.params.id },
-      data: {
-        name,
-        description,
-        parentCategoryId,
-      },
-    });
-
-    res.json(category);
-  } catch (error) {
-    res.status(400).json({ error: 'Failed to update category' });
-  }
-});
-
-// Delete category
-router.delete('/:id', async (req: Request, res: Response) => {
-  try {
-    await prisma.category.delete({
-      where: { id: req.params.id },
-    });
-
-    res.status(204).send();
-  } catch (error) {
-    res.status(400).json({ error: 'Failed to delete category' });
-  }
-});
+/**
+ * @swagger
+ * /api/categories/{id}:
+ *   delete:
+ *     tags: [Categories]
+ *     summary: Delete category
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       204:
+ *         description: Category deleted
+ */
+router.delete('/:id', deleteCategory);
 
 export default router;

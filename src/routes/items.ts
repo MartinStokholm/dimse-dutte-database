@@ -1,146 +1,212 @@
-import { Router, Request, Response } from 'express';
-import { prisma } from '../services/database';
+import { Router } from 'express';
+import {
+  createItem,
+  getItems,
+  getItemById,
+  updateItem,
+  archiveItem,
+  addItemTransaction,
+} from '../controllers/itemController';
 
 const router = Router();
 
-// Create item
-router.post('/', async (req: Request, res: Response) => {
-  try {
-    const { householdId, roomId, categoryId, name, description, quantity, notes, attributes } = req.body;
+/**
+ * @swagger
+ * /api/items:
+ *   post:
+ *     tags: [Items]
+ *     summary: Create a new item
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [householdId, roomId, name]
+ *             properties:
+ *               householdId:
+ *                 type: string
+ *                 format: uuid
+ *               roomId:
+ *                 type: string
+ *                 format: uuid
+ *               categoryId:
+ *                 type: string
+ *                 format: uuid
+ *               name:
+ *                 type: string
+ *                 example: Blender
+ *               description:
+ *                 type: string
+ *               quantity:
+ *                 type: integer
+ *                 default: 1
+ *               notes:
+ *                 type: string
+ *               attributes:
+ *                 type: object
+ *     responses:
+ *       201:
+ *         description: Item created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Item'
+ */
+router.post('/', createItem);
 
-    const item = await prisma.item.create({
-      data: {
-        householdId,
-        roomId,
-        categoryId,
-        name,
-        description,
-        quantity: quantity || 1,
-        notes,
-        attributes: attributes || null,
-      },
-    });
+/**
+ * @swagger
+ * /api/items:
+ *   get:
+ *     tags: [Items]
+ *     summary: Get all items
+ *     parameters:
+ *       - in: query
+ *         name: householdId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: query
+ *         name: roomId
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: List of items
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Item'
+ */
+router.get('/', getItems);
 
-    res.status(201).json(item);
-  } catch (error) {
-    res.status(400).json({ error: 'Failed to create item' });
-  }
-});
+/**
+ * @swagger
+ * /api/items/{id}:
+ *   get:
+ *     tags: [Items]
+ *     summary: Get item by ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Item details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Item'
+ */
+router.get('/:id', getItemById);
 
-// Get items by household or room
-router.get('/', async (req: Request, res: Response) => {
-  try {
-    const { householdId, roomId } = req.query;
+/**
+ * @swagger
+ * /api/items/{id}:
+ *   patch:
+ *     tags: [Items]
+ *     summary: Update item
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               quantity:
+ *                 type: integer
+ *               categoryId:
+ *                 type: string
+ *               notes:
+ *                 type: string
+ *               attributes:
+ *                 type: object
+ *     responses:
+ *       200:
+ *         description: Item updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Item'
+ */
+router.patch('/:id', updateItem);
 
-    const items = await prisma.item.findMany({
-      where: {
-        householdId: householdId ? String(householdId) : undefined,
-        roomId: roomId ? String(roomId) : undefined,
-        archivedAt: null,
-      },
-      include: {
-        tags: true,
-        media: true,
-      },
-    });
+/**
+ * @swagger
+ * /api/items/{id}:
+ *   delete:
+ *     tags: [Items]
+ *     summary: Archive item (soft delete)
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Item archived
+ */
+router.delete('/:id', archiveItem);
 
-    res.json(items);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch items' });
-  }
-});
-
-// Get item by ID
-router.get('/:id', async (req: Request, res: Response) => {
-  try {
-    const item = await prisma.item.findUnique({
-      where: { id: req.params.id },
-      include: {
-        tags: true,
-        media: true,
-        transactions: true,
-        locationHistory: true,
-      },
-    });
-
-    if (!item) {
-      return res.status(404).json({ error: 'Item not found' });
-    }
-
-    res.json(item);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch item' });
-  }
-});
-
-// Update item
-router.patch('/:id', async (req: Request, res: Response) => {
-  try {
-    const { name, description, quantity, notes, attributes, categoryId } = req.body;
-
-    const item = await prisma.item.update({
-      where: { id: req.params.id },
-      data: {
-        name,
-        description,
-        quantity,
-        notes,
-        attributes,
-        categoryId,
-      },
-    });
-
-    res.json(item);
-  } catch (error) {
-    res.status(400).json({ error: 'Failed to update item' });
-  }
-});
-
-// Archive item (soft delete)
-router.delete('/:id', async (req: Request, res: Response) => {
-  try {
-    const item = await prisma.item.update({
-      where: { id: req.params.id },
-      data: {
-        archivedAt: new Date(),
-      },
-    });
-
-    res.json(item);
-  } catch (error) {
-    res.status(400).json({ error: 'Failed to archive item' });
-  }
-});
-
-// Add inventory transaction
-router.post('/:id/transactions', async (req: Request, res: Response) => {
-  try {
-    const { change, reason, createdBy } = req.body;
-
-    const transaction = await prisma.inventoryTransaction.create({
-      data: {
-        itemId: req.params.id,
-        change,
-        reason,
-        createdBy,
-      },
-    });
-
-    // Update item quantity
-    const item = await prisma.item.findUnique({ where: { id: req.params.id } });
-    if (item) {
-      await prisma.item.update({
-        where: { id: req.params.id },
-        data: {
-          quantity: item.quantity + change,
-        },
-      });
-    }
-
-    res.status(201).json(transaction);
-  } catch (error) {
-    res.status(400).json({ error: 'Failed to create transaction' });
-  }
-});
+/**
+ * @swagger
+ * /api/items/{id}/transactions:
+ *   post:
+ *     tags: [Items]
+ *     summary: Add inventory transaction
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [change, reason, createdBy]
+ *             properties:
+ *               change:
+ *                 type: integer
+ *                 example: 5
+ *                 description: Positive or negative quantity change
+ *               reason:
+ *                 type: string
+ *                 example: Purchased
+ *               createdBy:
+ *                 type: string
+ *                 example: john@example.com
+ *     responses:
+ *       201:
+ *         description: Transaction created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/InventoryTransaction'
+ */
+router.post('/:id/transactions', addItemTransaction);
 
 export default router;

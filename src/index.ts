@@ -1,7 +1,9 @@
 import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import swaggerUi from 'swagger-ui-express';
 import { PrismaClient } from '@prisma/client';
+import { swaggerSpec } from './utils/swagger';
 import householdRoutes from './routes/households';
 import roomRoutes from './routes/rooms';
 import itemRoutes from './routes/items';
@@ -18,6 +20,10 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Swagger documentation
+app.use('/api-docs', swaggerUi.serve);
+app.get('/api-docs', swaggerUi.setup(swaggerSpec, { customCss: '.topbar { display: none }' }));
 
 // Global error handler middleware
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
@@ -42,6 +48,7 @@ app.get('/api/health', (_req: Request, res: Response) => {
 // Start server
 const server = app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Swagger UI available at http://localhost:${PORT}/api-docs`);
   console.log(`Node environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
