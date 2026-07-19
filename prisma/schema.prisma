@@ -1,0 +1,212 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Household {
+  id        String   @id @default(uuid())
+  name      String   @db.VarChar(255)
+  description String? @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  users  HouseholdUser[]
+  rooms  Room[]
+  items  Item[]
+
+  @@map("households")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String   @db.VarChar(255)
+  email     String   @unique @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  households HouseholdUser[]
+
+  @@map("users")
+}
+
+model HouseholdUser {
+  householdId String
+  userId      String
+  role        Role     @default(MEMBER)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([householdId, userId])
+  @@map("household_users")
+}
+
+enum Role {
+  OWNER
+  MEMBER
+  GUEST
+}
+
+model Room {
+  id          String   @id @default(uuid())
+  householdId String
+  name        String   @db.VarChar(255)
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  items     Item[]
+  media     RoomMedia[]
+
+  @@index([householdId])
+  @@map("rooms")
+}
+
+model Category {
+  id               String   @id @default(uuid())
+  name             String   @db.VarChar(255)
+  description      String?  @db.Text
+  parentCategoryId String?
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  items    Item[]
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentCategoryId], references: [id], onDelete: SetNull)
+  children Category[] @relation("CategoryHierarchy")
+
+  @@map("categories")
+}
+
+model Tag {
+  id        String   @id @default(uuid())
+  name      String   @unique @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  items ItemTag[]
+
+  @@map("tags")
+}
+
+model Item {
+  id          String    @id @default(uuid())
+  householdId String
+  roomId      String
+  categoryId  String?
+  name        String    @db.VarChar(255)
+  description String?   @db.Text
+  quantity    Int       @default(1)
+  notes       String?   @db.Text
+  attributes  Json?     @db.JsonB
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  archivedAt  DateTime? @map("archived_at") @db.Timestamptz
+
+  household    Household              @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  room         Room                   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  category     Category?              @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  tags         ItemTag[]
+  media        ItemMedia[]
+  transactions InventoryTransaction[]
+  locationHistory ItemLocationHistory[]
+
+  @@index([householdId])
+  @@index([roomId])
+  @@index([categoryId])
+  @@map("items")
+}
+
+model ItemTag {
+  itemId String
+  tagId  String
+
+  item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([itemId, tagId])
+  @@map("item_tags")
+}
+
+model Media {
+  id        String    @id @default(uuid())
+  storageKey String   @unique @db.VarChar(500)
+  filename  String    @db.VarChar(255)
+  mimeType  String    @map("mime_type") @db.VarChar(100)
+  fileSize  BigInt    @map("file_size")
+  width     Int?
+  height    Int?
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  itemMedia ItemMedia[]
+  roomMedia RoomMedia[]
+
+  @@map("media")
+}
+
+model ItemMedia {
+  itemId    String
+  mediaId   String
+  purpose   MediaPurpose @default(PRIMARY)
+  sortOrder Int          @default(0) @map("sort_order")
+
+  item  Item  @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  media Media @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@id([itemId, mediaId])
+  @@map("item_media")
+}
+
+model RoomMedia {
+  roomId    String
+  mediaId   String
+  purpose   MediaPurpose @default(PRIMARY)
+  sortOrder Int          @default(0) @map("sort_order")
+
+  room  Room  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  media Media @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  @@id([roomId, mediaId])
+  @@map("room_media")
+}
+
+enum MediaPurpose {
+  PRIMARY
+  GALLERY
+  RECEIPT
+  MANUAL
+}
+
+model InventoryTransaction {
+  id        String   @id @default(uuid())
+  itemId    String
+  change    Int
+  reason    String   @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  createdBy String   @map("created_by") @db.VarChar(255)
+
+  item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+  @@map("inventory_transactions")
+}
+
+model ItemLocationHistory {
+  id      String   @id @default(uuid())
+  itemId  String
+  roomId  String
+  movedAt DateTime @map("moved_at") @db.Timestamptz
+  movedBy String   @map("moved_by") @db.VarChar(255)
+  notes   String?  @db.Text
+
+  item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+  @@map("item_location_history")
+}
