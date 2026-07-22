@@ -1,19 +1,18 @@
-import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import tagRoutes from './routes/tags';
 import swaggerUi from 'swagger-ui-express';
-import { PrismaClient } from '@prisma/client';
-import { swaggerSpec } from './utils/swagger';
-import householdRoutes from './routes/households';
 import roomRoutes from './routes/rooms';
 import itemRoutes from './routes/items';
+import { prisma } from './services/database';
 import categoryRoutes from './routes/categories';
-import tagRoutes from './routes/tags';
+import { swaggerSpec } from './utils/swagger';
+import householdRoutes from './routes/households';
+import express, { Express, Request, Response, NextFunction } from 'express';
 
 dotenv.config();
 
 const app: Express = express();
-const prisma = new PrismaClient();
 
 const PORT = process.env.PORT || 3000;
 
