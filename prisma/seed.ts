@@ -1,23 +1,16 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../src/services/database';
 
 async function main() {
-  // Example: Create a household
-  const household = await prisma.household.create({
+  await prisma.household.create({
     data: {
-      name: 'My Household',
-      description: 'A household for testing',
+      name: 'Søren Frichs Vej 57C',
+      description: 'Her bor Emilie og Martin',
     },
   });
-
-  console.log('Created household:', household);
 }
 
 main()
-  .catch((e) => {
-    console.error(e);
-  })
+  .catch(console.error)
   .finally(async () => {
     await prisma.$disconnect();
   });
