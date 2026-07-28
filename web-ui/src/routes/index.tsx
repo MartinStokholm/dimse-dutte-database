@@ -1,5 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 
+import { HouseholdInventoryExample } from '../components/api-examples'
+
 export const Route = createFileRoute('/')({ component: Home })
 
 function Home() {
@@ -9,6 +11,13 @@ function Home() {
       <p className="mt-4 text-lg">
         Edit <code>src/routes/index.tsx</code> to get started.
       </p>
+
+      <section className="mt-8">
+        <h2 className="text-2xl font-semibold mb-4">Household Inventory Example</h2>
+        <div className="border rounded p-4 bg-white shadow-sm">
+          <HouseholdInventoryExample />
+        </div>
+      </section>
     </div>
   )
 }

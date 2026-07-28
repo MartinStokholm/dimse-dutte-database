@@ -23,6 +23,10 @@ app.use(express.json());
 // Swagger documentation
 app.use('/api-docs', swaggerUi.serve);
 app.get('/api-docs', swaggerUi.setup(swaggerSpec, { customCss: '.topbar { display: none }' }));
+app.get('/api-docs-json', (_req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
 
 // Global error handler middleware
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
